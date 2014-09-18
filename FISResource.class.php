@@ -150,7 +150,7 @@ class FISResource {
 
         if (self::$framework) {
             $html .= '<script type="text/javascript" src="' . self::$framework . '"></script>' . PHP_EOL;
-            $paths = self::getAsyncPaths();
+            $paths = self::getPaths();
 
             if (count($paths)) {
                 $html .= '<script type="text/javascript">';
@@ -162,7 +162,7 @@ class FISResource {
         return $html;
     }
 
-    private static function getAsyncPaths() {
+    private static function getPaths() {
         $pathsMap = array();
         $pathsNeeded = array();
 
@@ -181,7 +181,15 @@ class FISResource {
             }
         }
 
-        // 只把需要的弄出来
+        // foreach ( $pathsMap as $moduleId => $id) {
+        //     $info = self::getNode($id);
+
+        //     if (isset($info['extras']) && isset($info['extras']['moduleId']) && $info['extras']['moduleId'] != $moduleId) {
+        //         $pathsNeeded[$moduleId] = $info['extras']['moduleId'];
+        //     }
+        // }
+
+        // 把异步需要的弄出来
         if (isset(self::$arrRequireAsyncCollection['res'])) {
 
             foreach (self::$arrRequireAsyncCollection['res'] as $id => $arrRes) {
