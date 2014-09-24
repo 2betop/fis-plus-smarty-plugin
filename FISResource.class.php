@@ -199,7 +199,9 @@ class FISResource {
                     continue;
                 }
 
-                $pathsNeeded[$key] = self::getUri($id);
+                $uri = self::getUri($id);
+                $uri = preg_replace("/\.js$/", "", $uri);
+                $pathsNeeded[$key] = $uri;
             }
         }
 
