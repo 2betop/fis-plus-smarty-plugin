@@ -120,8 +120,7 @@ class FISResource {
 
     private static function getModJsHtml(){
 
-        // todo 开关
-        if (true) {
+        if (!preg_match('#\/mod(?:_[^_]+)?\.js$#', self::$framework)) {
             return self::getModJsHtmlV2();
         }
 
