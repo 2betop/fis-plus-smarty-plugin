@@ -78,7 +78,7 @@ class FISResource {
         }
         $jsIntPos = strpos($strContent, self::JS_SCRIPT_HOOK);
         if($jsIntPos !== false){
-            $jsContent = ($frameworkIntPos !== false) ? '' : self::getModJsHtml(); 
+            $jsContent = ($frameworkIntPos !== false) ? '' : self::getModJsHtml();
             $jsContent .= self::render('js') . self::renderScriptPool();
             $strContent = substr_replace($strContent, $jsContent, $jsIntPos, strlen(self::JS_SCRIPT_HOOK));
         }
@@ -119,6 +119,11 @@ class FISResource {
     }
 
     private static function getModJsHtml(){
+
+        if (!preg_match('#\/mod(?:_[^_]+)?\.js$#', self::$framework)) {
+            return self::getModJsHtmlV2();
+        }
+
         $html = '';
         $resourceMap = self::getResourceMap();
         $loadModJs = (self::$framework && (isset(self::$arrStaticCollection['js']) || $resourceMap));
@@ -133,6 +138,100 @@ class FISResource {
         }
         return $html;
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // 为了支持标准的 amd 增加的代码
+    // -----------------------------------------------------------------------------------------------------------------
+
+    // 输出模快 js
+    private static function getModJsHtmlV2(){
+        $html = '';
+
+        if (self::$framework) {
+            $html .= '<script type="text/javascript" src="' . self::$framework . '"></script>' . PHP_EOL;
+            $paths = self::getPaths();
+
+            if (count($paths)) {
+                $html .= '<script type="text/javascript">';
+                $html .= 'require.config({paths: '.json_encode($paths).'});';
+                $html .= '</script>';
+            }
+        }
+
+        return $html;
+    }
+
+    private static function getPaths() {
+        $pathsMap = array();
+        $pathsNeeded = array();
+
+        if (!isset(self::$arrRequireAsyncCollection['res']) && !isset(self::$arrRequireAsyncCollection['pkg'])) {
+            return $pathsNeeded;
+        }
+
+        // 收集 paths 表
+        foreach (self::$arrLoaded as $id => $uri) {
+            $info = self::getNode($id);
+
+            if (isset($info["extras"]) && isset($info["extras"]["paths"])) {
+                $paths = &$info["extras"]["paths"];
+
+                $pathsMap = array_merge($pathsMap, $paths);
+            }
+        }
+
+        // foreach ( $pathsMap as $moduleId => $id) {
+        //     $info = self::getNode($id);
+
+        //     if (isset($info['extras']) && isset($info['extras']['moduleId']) && $info['extras']['moduleId'] != $moduleId) {
+        //         $pathsNeeded[$moduleId] = $info['extras']['moduleId'];
+        //     }
+        // }
+
+        // 把异步需要的弄出来
+        if (isset(self::$arrRequireAsyncCollection['res'])) {
+
+            foreach (self::$arrRequireAsyncCollection['res'] as $id => $arrRes) {
+                $key = array_search($id, $pathsMap);
+
+                if ($key === false) {
+                    continue;
+                }
+
+                $uri = self::getUri($id);
+                $uri = preg_replace("/\.js$/", "", $uri);
+                $pathsNeeded[$key] = $uri;
+            }
+        }
+
+        return $pathsNeeded;
+    }
+
+    private static function getNSByID($id) {
+        $idx = strpos($id, ':');
+        $ns = '__global__';
+
+        if($idx !== false){
+            $ns = substr($id, 0, $idx);
+        }
+
+        return $ns;
+    }
+
+    private static function getNode($id, $type = 'res') {
+        $ns = self::getNSByID($id);
+
+        if (isset(self::$arrMap[$ns])) {
+            $root = &self::$arrMap[$ns];
+
+            return $root[$type][$id];
+        }
+        return null;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // 到此结束
+    // -----------------------------------------------------------------------------------------------------------------
 
     //渲染资源，将收集到的js css，变为html标签，异步js资源变为resorce map。
     public static function render($type){
@@ -159,7 +258,7 @@ class FISResource {
         return $html;
     }
 
-    
+
 
     public static function addScriptPool($str, $priority) {
         $priority = intval($priority);
