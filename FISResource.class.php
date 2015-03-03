@@ -16,6 +16,7 @@ class FISResource {
     private static $arrScriptPool = array();
 
     public static $framework = null;
+    public static $useAMD = null;
 
     //记录{%script%}, {%style%}的id属性
     public static $cp = null;
@@ -91,6 +92,11 @@ class FISResource {
         self::$framework = $strFramework;
     }
 
+    // 设置是否采用 AMD 方式输出资源表
+    public static function setUseAMD($value) {
+        self::$useAMD = $value;
+    }
+
     //返回静态资源uri，有包的时候，返回包的uri
     public static function getUri($strName, $smarty) {
         $intPos = strpos($strName, ':');
@@ -120,7 +126,7 @@ class FISResource {
 
     private static function getModJsHtml(){
 
-        if (!preg_match('#\/mod(?:_[^_]+)?\.js$#', self::$framework)) {
+        if (self::$useAMD === true || self::$useAMD === null && preg_match('#(?:require|amd|esl)#', self::$framework)) {
             return self::getModJsHtmlV2();
         }
 
@@ -496,5 +502,34 @@ class FISResource {
         if (preg_match('/\.('.implode('|', $arrExt).')$/', $strName)) {
             trigger_error(date('Y-m-d H:i:s') . '   ' . $strName . ' ' . $strMessage, $errorLevel);
         }
+    }
+
+    public static function checkCompile($deps, $smarty, $_smarty_tpl) {
+        $_valid = true;
+
+        foreach ($deps as $key => $val) {
+            if ($val !== FISResource::getTplMd5($key, $smarty)) {
+                $_valid = false;
+                $_smarty_tpl->mustCompile = 1;
+                break;
+            }
+        }
+
+        return $_valid;
+    }
+
+    public static function getTplMd5($path, $smarty) {
+        if (!preg_match('#^template\/([^\/]+)#', $path, $match)) {
+            throw new Exception("unrecognized smarty tpl path", 1);
+        }
+
+        $strNamespace =  $match[1];
+        if(isset(self::$arrMap[$strNamespace]) || self::register($strNamespace, $smarty)){
+            $arrMap = &self::$arrMap[$strNamespace];
+
+            return $arrMap['md5'][$path];
+        }
+
+        return null;
     }
 }
