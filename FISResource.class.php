@@ -17,6 +17,8 @@ class FISResource {
 
     public static $framework = null;
     public static $useAMD = null;
+    
+    private static $smarty = null;
 
     //记录{%script%}, {%style%}的id属性
     public static $cp = null;
@@ -105,6 +107,13 @@ class FISResource {
         } else {
             $strNamespace = substr($strName, 0, $intPos);
         }
+        
+        if (!empty($smarty)) {
+            self::$smarty = $smarty;
+        } else {
+            $smarty = self::$smarty;
+        }
+        
         if(isset(self::$arrMap[$strNamespace]) || self::register($strNamespace, $smarty)) {
             $arrMap = &self::$arrMap[$strNamespace];
             if (isset($arrMap['res'][$strName])) {
